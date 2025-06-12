@@ -1,26 +1,40 @@
 import win32com.client
 import time
 
-try:
-    SapGuiAuto = win32com.client.GetObject("SAPGUI")
-    application = SapGuiAuto.GetScriptingEngine
+def encontrar_sessao_sap():
+    try:
+        SapGuiAuto = win32com.client.GetObject("SAPGUI")
+        application = SapGuiAuto.GetScriptingEngine
 
-    if application.Children.Count == 0:
-        raise Exception("Nenhuma conexão SAP ativa foi encontrada.")
+        for i in range(application.Children.Count):
+            connection = application.Children(i)
+            for j in range(connection.Children.Count):
+                session = connection.Children(j)
+                # Verifica se a sessão está pronta
+                if session.Info.IsLowSpeedConnection == False:
+                    print(f"✅ Sessão encontrada: Conexão {i}, Sessão {j}")
+                    return session
+        print("❌ Nenhuma sessão SAP válida foi encontrada.")
+        return None
 
-    connection = application.Children(0)
+    except Exception as e:
+        print("❌ Erro ao buscar sessão SAP:")
+        print(e)
+        return None
 
-    if connection.Children.Count == 0:
-        raise Exception("Nenhuma sessão SAP ativa foi encontrada.")
 
-    session = connection.Children(0)
+def abrir_transacao(session, transacao):
+    try:
+        session.findById("wnd[0]/tbar[0]/okcd").text = transacao
+        session.findById("wnd[0]").sendVKey(0)
+        print(f"🚀 Transação '{transacao}' executada com sucesso!")
+    except Exception as e:
+        print(f"❌ Erro ao abrir a transação '{transacao}':")
+        print(e)
 
-    # Manda o comando da transação
-    session.findById("wnd[0]/tbar[0]/okcd").text = "j1b3n"
-    session.findById("wnd[0]").sendVKey(0)
 
-    print("✅ Comando J1B3N enviado com sucesso!")
-
-except Exception as e:
-    print("❌ Erro ao executar o script:")
-    print(e)
+# -------- EXECUÇÃO -------- #
+if __name__ == "__main__":
+    sessao = encontrar_sessao_sap()
+    if sessao:
+        abrir_transacao(sessao, "j1b3n")
