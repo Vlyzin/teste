@@ -12,13 +12,13 @@ def encontrar_sessao_sap():
                 session = connection.Children(j)
                 # Verifica se a sessão está pronta
                 if session.Info.IsLowSpeedConnection == False:
-                    print(f"✅ Sessão encontrada: Conexão {i}, Sessão {j}")
+                    print(f" Sessão encontrada: Conexão {i}, Sessão {j}")
                     return session
-        print("❌ Nenhuma sessão SAP válida foi encontrada.")
+        print(" Nenhuma sessão SAP válida foi encontrada.")
         return None
 
     except Exception as e:
-        print("❌ Erro ao buscar sessão SAP:")
+        print(" Erro ao buscar sessão SAP:")
         print(e)
         return None
 
@@ -27,9 +27,9 @@ def abrir_transacao(session, transacao):
     try:
         session.findById("wnd[0]/tbar[0]/okcd").text = transacao
         session.findById("wnd[0]").sendVKey(0)
-        print(f"🚀 Transação '{transacao}' executada com sucesso!")
+        print(f" Transação '{transacao}' executada com sucesso!")
     except Exception as e:
-        print(f"❌ Erro ao abrir a transação '{transacao}':")
+        print(f" Erro ao abrir a transação '{transacao}':")
         print(e)
 
 
