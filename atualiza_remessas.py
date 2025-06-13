@@ -19,6 +19,7 @@ if not planilha_path:
     input("Pressione Enter para sair...")
     exit()
 
+# Abre a planilha
 wb = openpyxl.load_workbook(planilha_path)
 ws = wb['Sheet1']
 
@@ -34,35 +35,60 @@ except Exception as e:
     input("Pressione Enter para sair...")
     exit()
 
-# Loop nas remessas da planilha
-for row in ws.iter_rows(min_row=2, values_only=True):
+# Loop nas remessas
+for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
     remessa = str(row[0])
-    data_entrega = row[1].strftime('%d.%m.%Y')
+    data_raw = row[1]
 
-    print(f"Atualizando remessa {remessa} com data {data_entrega}")
+    if not remessa or not data_raw:
+        print(f"[AVISO] Linha {idx} ignorada - remessa ou data vazia.")
+        continue
 
-    session.StartTransaction("VL02N")
-    session.FindById("wnd[0]").Maximize()
-    session.FindById("wnd[0]/usr/ctxtLIKP-VBELN").Text = remessa
-    session.FindById("wnd[0]").SendVKey(0)
-    time.sleep(1)
+    data_entrega = data_raw.strftime('%d.%m.%Y')
+    print(f"Atualizando linha {idx} | Remessa: {remessa} | Data: {data_entrega}")
+    
+    try:
+        session.StartTransaction("VL02N")
+        session.FindById("wnd[0]").Maximize()
+        session.FindById("wnd[0]/usr/ctxtLIKP-VBELN").Text = remessa
+        session.FindById("wnd[0]").SendVKey(0)
+        time.sleep(1)
 
-    # Go to > Header > Dates
-    session.FindById("wnd[0]/mbar/menu[2]/menu[1]/menu[11]").Select()
-    time.sleep(1)
+        # Navega até a aba de datas
+        session.FindById("wnd[0]/mbar/menu[2]/menu[1]/menu[11]").Select()
+        time.sleep(1)
 
-    # Campo "End Actual"
-    field_path = "wnd[0]/usr/tabsTAXI_TABSTRIP_HEAD/tabpT\\11/ssubSUBSCREEN_BODY:SAPMV50A:2122/" + \
-                 "subTSEG_STD:SAPLTSED:0100/tblSAPLTSEDTC_TSEG_STD/ctxtITSEGDIAE-TIME_TST04[10,0]"
-    session.FindById(field_path).SetFocus()
-    session.FindById(field_path).Text = data_entrega
-    session.FindById(field_path).CaretPosition = 2
+        field_path = "wnd[0]/usr/tabsTAXI_TABSTRIP_HEAD/tabpT\\11/" + \
+                     "ssubSUBSCREEN_BODY:SAPMV50A:2122/" + \
+                     "subTSEG_STD:SAPLTSED:0100/tblSAPLTSEDTC_TSEG_STD/" + \
+                     "ctxtITSEGDIAE-TIME_TST04[10,0]"
 
-    # Salvar e voltar
-    session.FindById("wnd[0]/tbar[0]/btn[11]").Press()  # Gravar
-    time.sleep(1)
-    session.FindById("wnd[0]/tbar[0]/btn[15]").Press()  # Voltar
-    time.sleep(1)
+        try:
+            campo = session.FindById(field_path)
+        except:
+            print(f"[INFO] Linha {idx}: campo não encontrado, tentando adicionar linha...")
+            try:
+                session.FindById("wnd[0]/usr/tabsTAXI_TABSTRIP_HEAD/tabpT\\11/" +
+                                 "ssubSUBSCREEN_BODY:SAPMV50A:2122/" +
+                                 "subTSEG_STD:SAPLTSED:0100/btnAPPEND").Press()
+                time.sleep(1)
+                campo = session.FindById(field_path)
+            except Exception as add_err:
+                print(f"[ERRO] Linha {idx} | Remessa {remessa} | Falha ao adicionar linha: {add_err}")
+                continue
 
-print(" Todas as remessas foram atualizadas com sucesso!")
+        campo.SetFocus()
+        campo.Text = data_entrega
+        campo.CaretPosition = 2
+
+        session.FindById("wnd[0]/tbar[0]/btn[11]").Press()  # Gravar
+        time.sleep(1)
+        session.FindById("wnd[0]/tbar[0]/btn[15]").Press()  # Voltar
+        time.sleep(1)
+
+    except Exception as e:
+        print(f"[ERRO] Linha {idx} | Remessa {remessa} | Erro geral: {e}")
+        continue
+
+print(" Todas as remessas foram processadas.")
 input("Pressione Enter para sair...")
